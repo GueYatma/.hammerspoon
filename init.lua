@@ -16,7 +16,7 @@ require("modules.shortcuts")
 -- 4. Gestion des Bureaux & GPS
 require("modules.desktops")
 
--- 5. Dashboard (Désactivé pour l'instant) modifs pour gth
+-- 5. Dashboard (Désactivé pour l'instant)
 require("modules.dashboard")
 
 -- 6. Intelligence Artificielle (Le fameux ai_paste)
