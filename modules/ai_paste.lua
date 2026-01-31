@@ -1,85 +1,95 @@
 -- ==========================================================
--- MODULE : AI PASTE (LA MÉTHODE DU "JUGE DE PAIX")
--- Fichier : modules/ai_paste.lua
+-- MODULE : AI PASTE (VITESSE + AUTO-SEND + NOTIF DISCRÈTE)
 -- ==========================================================
 
 local authorizedAI = { ["Gemini"] = true, ["ChatGPT"] = true }
 _G.captureTask = nil
 _G.mouseWatcher = nil
-_G.clipboardWatcher = nil -- On désactive l'ancien watcher sourd
+_G.clipboardWatcher = nil
 
--- MÉMOIRE : On retient le "numéro de série" du dernier copier-coller
-local last_paste_count = hs.pasteboard.changeCount()
+-- 1. NOTIFICATION DISCRÈTE (En bas à droite)
+local function notifyCopy()
+    local mainScreen = hs.screen.primaryScreen()
+    local screenFrame = mainScreen:fullFrame()
+    
+    -- Style du badge : petit, sombre, semi-transparent
+    local style = {
+        strokeColor = {white = 1, alpha = 0.2},
+        fillColor = {black = 1, alpha = 0.7},
+        radius = 10,
+        atScreenEdge = 2 -- En bas à droite
+    }
+    
+    hs.alert.show("Sélection copiée", style, mainScreen, 1.5)
+end
 
--- 1. FONCTION D'ENVOI
+-- 2. FONCTION D'ENVOI (Optimisée et plus rapide)
 local function sendToAI()
-    local app = nil
-    for _, win in ipairs(hs.window.orderedWindows()) do
-        if win:application() and authorizedAI[win:application():name()] then
-            app = win:application()
+    local windows = hs.window.orderedWindows()
+    local targetApp = nil
+
+    for _, win in ipairs(windows) do
+        local app = win:application()
+        if app and authorizedAI[app:name()] then
+            targetApp = app
             break
         end
     end
 
-    if app then
-        app:activate()
-        hs.timer.doAfter(0.3, function()
-            local win = app:mainWindow() or app:allWindows()[1]
+    if targetApp then
+        targetApp:activate()
+        -- Délai divisé par deux (0.15s)
+        hs.timer.doAfter(0.15, function()
+            local win = targetApp:mainWindow()
             if win then
                 local f = win:frame()
-                -- Clic pour focus
+                -- Clic zone de texte
                 hs.eventtap.leftClick({ x = f.x + (f.w / 2), y = f.y + (f.h - 100) })
-                -- Collage
-                hs.timer.doAfter(0.1, function() 
+                
+                -- Collage ultra-rapide
+                hs.timer.doAfter(0.05, function() 
                     hs.eventtap.keyStroke({"cmd"}, "v") 
+                    -- AUTO-SEND : On appuie sur Entrée
+                    hs.timer.doAfter(0.05, function()
+                        hs.eventtap.keyStroke({}, "return")
+                    end)
                 end)
             end
         end)
-    else
-        hs.alert.show("❌ IA introuvable")
     end
 end
 
--- 2. DÉCLENCHEUR SOURIS + JUGE DE PAIX
+-- 3. DÉCLENCHEUR SOURIS (Terminal Apple)
 _G.mouseWatcher = hs.eventtap.new({hs.eventtap.event.types.leftMouseUp}, function(event)
     local app = hs.application.frontmostApplication()
-    if not app then return end
-    local id = app:bundleID()
-
-    -- On surveille iTerm2 ET Terminal
-    if (id == "com.googlecode.iterm2" or id == "com.apple.Terminal") then
-        
-        -- A. Si c'est Terminal Apple, on aide un peu (car il ne copie pas seul)
-        if id == "com.apple.Terminal" then
-             -- Astuce : On ne force PAS Cmd+C ici pour éviter les boucles.
-             -- L'utilisateur doit faire Cmd+C manuellement sur Apple Terminal.
-             -- OU ALORS, on accepte que sur Apple Terminal, c'est manuel.
-        end
-
-        -- B. VERIFICATION CHIRURGICALE (On attend 0.4s que la copie se fasse)
-        hs.timer.doAfter(0.4, function()
-            local current_count = hs.pasteboard.changeCount()
-            
-            -- LE TEST ULTIME :
-            -- Est-ce que le compteur a changé depuis la dernière fois ?
-            if current_count > last_paste_count then
-                
-                -- OUI : Ça veut dire que tu as vraiment sélectionné du nouveau texte.
-                last_paste_count = current_count -- On met à jour la mémoire
-                hs.alert.show("🚀 Envoi -> IA")
-                sendToAI()
-                
-            else
-                -- NON : Le compteur est le même. 
-                -- Ça veut dire que tu as juste cliqué dans le vide ou désélectionné.
-                -- ON NE FAIT RIEN. SILENCE ABSOLU.
-            end
-        end)
+    if app and app:bundleID() == "com.apple.Terminal" then
+        hs.eventtap.keyStroke({"cmd"}, "c")
     end
 end)
 _G.mouseWatcher:start()
 
--- 3. CAPTURE D'ÉCRAN (Toujours là, fidèle au poste)
+-- 4. SURVEILLANT DISCRET
+local lastCount = hs.pasteboard.changeCount()
+
+_G.clipboardWatcher = hs.pasteboard.watcher.new(function()
+    local currentCount = hs.pasteboard.changeCount()
+    if currentCount == lastCount then return end
+    lastCount = currentCount
+
+    local app = hs.application.frontmostApplication()
+    if not app then return end
+    local id = app:bundleID()
+
+    if (id == "com.googlecode.iterm2" or id == "com.apple.Terminal") then
+        if hs.pasteboard.readString() then
+            notifyCopy() -- Nouvelle notification discrète
+            sendToAI()
+        end
+    end
+end)
+_G.clipboardWatcher:start()
+
+-- 5. CAPTURE D'ÉCRAN (Alt + S)
 hs.hotkey.bind({"alt"}, "s", function()
     _G.captureTask = hs.task.new("/usr/sbin/screencapture", function(exitCode)
         if exitCode == 0 then sendToAI() end
@@ -87,11 +97,4 @@ hs.hotkey.bind({"alt"}, "s", function()
     _G.captureTask:start()
 end)
 
--- 4. BOUTON DE SECOURS (Option + V)
--- Si jamais l'automatisme échoue, tu fais ça et ça force l'envoi.
-hs.hotkey.bind({"alt"}, "v", function()
-    hs.alert.show("🛟 Envoi Forcé")
-    sendToAI()
-end)
-
-hs.alert.show("✅ AI Paste : Mode Juge de Paix")
+hs.alert.show("✅ AI Paste : Turbo Mode")

@@ -7,6 +7,7 @@ hs.hotkey.bind({"alt"}, "C", function() _G.openNewWindow("Google Chrome") end)
 hs.hotkey.bind({"alt"}, "G", function() _G.openNewWindow("Gemini") end)
 hs.hotkey.bind({"alt"}, "D", function() hs.urlevent.openURL("https://docs.google.com/") end)
 hs.hotkey.bind({"alt"}, "X", function() _G.openNewWindow("Paperless-ngx") end)
+hs.hotkey.bind({"alt"}, "I", function() _G.openNewWindow("ChatGPT") end)
 
 -- DEV & TOOLS
 hs.hotkey.bind({"alt"}, "V", function() _G.openNewWindow("Visual Studio Code") end)
