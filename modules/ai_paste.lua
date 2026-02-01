@@ -121,7 +121,7 @@ _G.clipboardWatcher:start()
 hs.hotkey.bind({"alt"}, "s", function()
     _G.captureTask = hs.task.new("/usr/sbin/screencapture", function(exitCode)
         if exitCode == 0 then 
-            hs.timer.doAfter(0.6, function()
+            hs.timer.doAfter(0.1, function()
                 notifyCopy("Image Copiée")
                 sendToAI(true) -- C'est une image
             end)
