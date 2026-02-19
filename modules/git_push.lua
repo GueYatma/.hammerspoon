@@ -146,6 +146,7 @@ function _G.pushHammerspoon(prefixOverride)
                     if pushCode == 0 then
                         showStamp("Code bien pousse sur GitHub !", {red = 0.2, green = 0.8, blue = 0.4, alpha = 0.95}, "Reload Hammerspoon en cours")
                         hs.timer.doAfter(0.8, function()
+                            hs.settings.set("koktek_auto_reload_pending", true)
                             hs.reload()
                         end)
                     else
@@ -156,7 +157,3 @@ function _G.pushHammerspoon(prefixOverride)
         end)
     end)
 end
-
-hs.hotkey.bind({"ctrl", "alt"}, "P", function()
-    _G.pushHammerspoon()
-end)

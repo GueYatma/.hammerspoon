@@ -22,13 +22,14 @@ _G.desktops = {
     [4]  = { name = "Postgre Admin",          color = {red=0.2, green=0.8, blue=0.2, alpha=0.95} },
     [5]  = { name = "Terminaux",              color = {red=1, green=0.8, blue=0.0, alpha=0.95} },
     [6]  = { name = "GitHub",                 color = {red=0.0, green=0.8, blue=0.8, alpha=0.95} },
-    [7]  = { name = "Hostinger",              color = {red=0.6, green=0.6, blue=0.6, alpha=0.95} },
+    [7]  = { name = "Hostinger",              color = {red=0.9, green=0.3, blue=0.2, alpha=0.95} },
+    [8]  = { name = "Anti-Gravity (Google)", color = {red=0.45, green=0.25, blue=0.95, alpha=0.95} },
 
     -- === ÉCRAN DROITE (9 à 16) ===
     [9]  = { name = "VS Code — koktek",       color = {red=1, green=0.5, blue=0.0, alpha=0.95} },
     [10] = { name = "koktek localhost/vps",   color = {red=0.3, green=0.3, blue=0.9, alpha=0.95} },
-    [15] = { name = "VS Code — Hammerspoon", color = {white=0.4, alpha=0.9} },
-    [16] = { name = "Draft",                 color = {red=0.5, green=0.6, blue=0.2, alpha=0.85} }
+    [15] = { name = "VS Code — Hammerspoon", color = {red=0.15, green=0.55, blue=0.95, alpha=0.95} },
+    [16] = { name = "Draft",                 color = {red=0.85, green=0.2, blue=0.5, alpha=0.95} }
 }
 
 local function getScreens()
@@ -82,6 +83,31 @@ local function displayBadge(index, targetScreen)
 end
 
 -- Navigation via Pavé Numérique (Directe)
+local function gotoSpaceByIndex(index)
+    if not (hs.spaces and hs.spaces.spacesForScreen) then return false end
+
+    local screens = getScreens()
+    local targetScreen = (index <= 8) and screens.left or screens.right
+    local spaces = hs.spaces.spacesForScreen(targetScreen)
+    if not spaces or #spaces == 0 then return false end
+
+    local pos = (index <= 8) and index or (index - 8)
+    local spaceID = spaces[pos]
+    if not spaceID then return false end
+
+    if hs.spaces.gotoSpace then
+        hs.spaces.gotoSpace(spaceID)
+        return true
+    end
+
+    if hs.spaces.changeToSpace then
+        hs.spaces.changeToSpace(spaceID)
+        return true
+    end
+
+    return false
+end
+
 local function switchToDesktop(index)
     local screens = getScreens()
     local targetScreen = (index <= 8) and screens.left or screens.right
@@ -91,10 +117,18 @@ local function switchToDesktop(index)
 
     if index <= 8 then currentLeftDesktop = index else currentRightDesktop = index end
 
-    if index <= 8 then
-        hs.eventtap.keyStroke({"ctrl"}, tostring(index))
-    else
-        hs.eventtap.keyStroke({"ctrl", "alt"}, tostring(index - 8))
+    local switched = gotoSpaceByIndex(index)
+    if not switched then
+        -- Fallback clavier si l'API Spaces n'est pas dispo
+        if index <= 8 then
+            hs.eventtap.keyStroke({"ctrl"}, tostring(index))
+        elseif index == 9 then
+            hs.eventtap.keyStroke({"ctrl"}, "9")
+        elseif index == 10 then
+            hs.eventtap.keyStroke({"ctrl"}, "0")
+        else
+            hs.eventtap.keyStroke({"ctrl", "shift"}, tostring(index - 10))
+        end
     end
 
     -- Affichage
@@ -158,7 +192,9 @@ _G.arrowWatcher = hs.eventtap.new({hs.eventtap.event.types.keyDown}, function(ev
     return false
 end):start()
 
--- RACCOURCIS
+-- RACCOURCIS (PAVÉ NUMÉRIQUE)
 for i = 1, 8 do hs.hotkey.bind({"ctrl"}, "pad" .. i, function() switchToDesktop(i) end) end
-for i = 1, 8 do hs.hotkey.bind({"ctrl", "shift"}, "pad" .. i, function() switchToDesktop(i + 8) end) end
+hs.hotkey.bind({"ctrl"}, "pad9", function() switchToDesktop(9) end)
+hs.hotkey.bind({"ctrl"}, "pad0", function() switchToDesktop(10) end)
+for i = 1, 6 do hs.hotkey.bind({"ctrl", "shift"}, "pad" .. i, function() switchToDesktop(i + 10) end) end
 hs.hotkey.bind({"ctrl", "alt"}, "pad0", showDualGPS)

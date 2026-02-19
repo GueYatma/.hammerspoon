@@ -2,8 +2,11 @@
 -- MODULE : SYSTÈME & NAVIGATION
 -- ==========================================================
 
+local reloadStampKey = "koktek_auto_reload_pending"
+
 -- 1. Reload Config (Ctrl + Alt + R)
 hs.hotkey.bind({"ctrl", "alt"}, "R", function()
+  hs.settings.set(reloadStampKey, true)
   hs.reload()
 end)
 
@@ -55,14 +58,21 @@ end)
 -- ==========================================================
 -- AUTO-RELOAD HAMMERSPOON SUR CHANGEMENT DE FICHIER
 -- ==========================================================
-local reloadStampKey = "koktek_auto_reload_pending"
-
 local function showReloadStamp()
+    if _G.reloadStampTimer then
+        _G.reloadStampTimer:stop()
+        _G.reloadStampTimer = nil
+    end
+    if _G.reloadStampCanvas then
+        _G.reloadStampCanvas:delete()
+        _G.reloadStampCanvas = nil
+    end
+
     local screen = hs.screen.primaryScreen()
     local frame = screen:frame()
 
-    local width = 240
-    local height = 70
+    local width = 260
+    local height = 64
     local margin = 24
 
     local x = frame.x + frame.w - width - margin
@@ -72,62 +82,76 @@ local function showReloadStamp()
     canvas:level(hs.canvas.windowLevels.status)
     canvas:behavior(hs.canvas.windowBehaviors.canJoinAllSpaces)
 
-    local stroke = {red = 0.2, green = 0.8, blue = 0.4, alpha = 0.95}
+    _G.reloadStampCanvas = canvas
+
+    local fill = {red = 0.98, green = 0.86, blue = 0.72, alpha = 0.98}
+    local textColor = {white = 0.1, alpha = 0.9}
     local i = 1
+    local closeRect = {x = width - 34, y = 8, w = 24, h = 24}
 
     -- Ombre légère pour l'effet flottant
     canvas[i] = {
         type = "rectangle",
         action = "fill",
-        fillColor = {white = 0, alpha = 0.28},
-        roundedRectRadii = {xRadius = 12, yRadius = 12},
+        fillColor = {white = 0, alpha = 0.22},
+        roundedRectRadii = {xRadius = 24, yRadius = 24},
         frame = {x = 3, y = 3, w = width - 3, h = height - 3}
     }
     i = i + 1
     canvas[i] = {
         type = "rectangle",
         action = "fill",
-        fillColor = {white = 0.05, alpha = 0.9},
-        roundedRectRadii = {xRadius = 12, yRadius = 12}
+        fillColor = fill,
+        roundedRectRadii = {xRadius = 24, yRadius = 24}
     }
     i = i + 1
     canvas[i] = {
-        type = "rectangle",
-        action = "stroke",
-        strokeColor = stroke,
-        strokeWidth = 3,
-        roundedRectRadii = {xRadius = 12, yRadius = 12}
+        type = "text",
+        text = "Hammerspoon rechargé",
+        textColor = textColor,
+        textSize = 14,
+        textAlignment = "left",
+        frame = {x = "8%", y = "24%", w = "78%", h = "52%"}
     }
-    -- Stamp "OK" à gauche
+
+    -- Bouton fermer
     i = i + 1
     canvas[i] = {
         type = "rectangle",
         action = "fill",
-        fillColor = stroke,
-        roundedRectRadii = {xRadius = 7, yRadius = 7},
-        frame = {x = "5%", y = "22%", w = "14%", h = "56%"}
+        fillColor = {white = 1, alpha = 0.0},
+        roundedRectRadii = {xRadius = 6, yRadius = 6},
+        frame = closeRect
     }
     i = i + 1
     canvas[i] = {
         type = "text",
-        text = "OK",
-        textColor = {white = 0, alpha = 0.85},
-        textSize = 13,
-        textAlignment = "center",
-        frame = {x = "5%", y = "28%", w = "14%", h = "44%"}
-    }
-    i = i + 1
-    canvas[i] = {
-        type = "text",
-        text = "Reload OK",
-        textColor = {white = 1, alpha = 0.95},
+        text = "×",
+        textColor = {white = 0.15, alpha = 0.55},
         textSize = 14,
-        textAlignment = "left",
-        frame = {x = "24%", y = "26%", w = "70%", h = "48%"}
+        textAlignment = "center",
+        frame = closeRect
     }
 
     canvas:show()
-    hs.timer.doAfter(2.0, function() canvas:delete() end)
+
+    local function dismiss()
+        if canvas then
+            canvas:delete()
+            canvas = nil
+        end
+    end
+
+    canvas:mouseCallback(function(_, msg, _, xPos, yPos)
+        if msg == "mouseUp" then
+            if xPos >= closeRect.x and xPos <= (closeRect.x + closeRect.w)
+                and yPos >= closeRect.y and yPos <= (closeRect.y + closeRect.h) then
+                dismiss()
+            end
+        end
+    end)
+
+    _G.reloadStampTimer = hs.timer.doAfter(3.5, dismiss)
 end
 
 if hs.settings.get(reloadStampKey) then
