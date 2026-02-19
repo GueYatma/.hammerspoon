@@ -10,11 +10,29 @@ local function buildCommitMessage(prefix)
     return string.format("%s sauvegarde automatique du %s", prefix, dateStamp)
 end
 
-local function showStamp(message, accentColor, subMessage)
+local function getGithubIcon()
+    local customIconPath = hs.configdir .. "/Spoons/logo github.jpeg"
+    local img = hs.image.imageFromPath(customIconPath)
+    if img then return img end
+
+    local bundleIDs = {
+        "com.github.GitHubClient",
+        "com.github.GitHubDesktop"
+    }
+
+    for _, id in ipairs(bundleIDs) do
+        img = hs.image.imageFromAppBundle(id)
+        if img then return img end
+    end
+
+    return nil
+end
+
+local function showStamp(message, accentColor, subMessage, withGithubIcon)
     local screen = hs.screen.primaryScreen()
     local frame = screen:frame()
 
-    local width = 380
+    local width = 400
     local height = 90
     local margin = 24
 
@@ -26,6 +44,7 @@ local function showStamp(message, accentColor, subMessage)
     canvas:behavior(hs.canvas.windowBehaviors.canJoinAllSpaces)
 
     local stroke = accentColor or {red = 0.2, green = 0.8, blue = 0.4, alpha = 0.95}
+    local icon = withGithubIcon and getGithubIcon() or nil
 
     local i = 1
     -- Ombre légère pour l'effet flottant
@@ -51,7 +70,7 @@ local function showStamp(message, accentColor, subMessage)
         strokeWidth = 3,
         roundedRectRadii = {xRadius = 14, yRadius = 14}
     }
-    -- Stamp "OK" à gauche
+    -- Bloc à gauche (icône GitHub si dispo, sinon OK)
     i = i + 1
     canvas[i] = {
         type = "rectangle",
@@ -60,15 +79,25 @@ local function showStamp(message, accentColor, subMessage)
         roundedRectRadii = {xRadius = 8, yRadius = 8},
         frame = {x = "4%", y = "24%", w = "12%", h = "52%"}
     }
-    i = i + 1
-    canvas[i] = {
-        type = "text",
-        text = "OK",
-        textColor = {white = 0, alpha = 0.85},
-        textSize = 14,
-        textAlignment = "center",
-        frame = {x = "4%", y = "30%", w = "12%", h = "40%"}
-    }
+    if icon then
+        i = i + 1
+        canvas[i] = {
+            type = "image",
+            image = icon,
+            imageScaling = "scaleToFit",
+            frame = {x = "4.5%", y = "26%", w = "11%", h = "48%"}
+        }
+    else
+        i = i + 1
+        canvas[i] = {
+            type = "text",
+            text = "OK",
+            textColor = {white = 0, alpha = 0.85},
+            textSize = 14,
+            textAlignment = "center",
+            frame = {x = "4%", y = "30%", w = "12%", h = "40%"}
+        }
+    end
     i = i + 1
     canvas[i] = {
         type = "text",
@@ -144,13 +173,18 @@ function _G.pushHammerspoon(prefixOverride)
 
                 runGit({"push"}, function(pushCode)
                     if pushCode == 0 then
-                        showStamp("Code bien pousse sur GitHub !", {red = 0.2, green = 0.8, blue = 0.4, alpha = 0.95}, "Reload Hammerspoon en cours")
+                        showStamp(
+                            "Code bien pousse sur GitHub !",
+                            {red = 0.2, green = 1.0, blue = 0.4, alpha = 0.95},
+                            "Reload Hammerspoon en cours",
+                            true
+                        )
                         hs.timer.doAfter(0.8, function()
                             hs.settings.set("koktek_auto_reload_pending", true)
                             hs.reload()
                         end)
                     else
-                        showStamp("Erreur git push", {red = 0.9, green = 0.2, blue = 0.2, alpha = 0.95})
+                        showStamp("Erreur git push", {red = 0.9, green = 0.2, blue = 0.2, alpha = 0.95}, nil, true)
                     end
                 end)
             end)

@@ -9,7 +9,7 @@
 - Quand l’utilisateur dit "push to GitHub" :
 - Créer un court message de commit en français avec un préfixe ci‑dessous.
 - Pousser vers GitHub.
-- Confirmer dans le chat avec un message très visible en gras : **PUSH OK — ...** ou **PUSH ÉCHEC — ...**.
+- Confirmer dans le chat avec un message très visible en gras : **PUSH OK — ...** ou **PUSH ÉCHEC — ...**, en incluant le nom du commit.
 - Vérifier l’exécution de GitHub Actions si possible, sinon demander un lien.
 - Vérifier le déploiement via le build stamp et rapporter le résultat.
 
