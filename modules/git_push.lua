@@ -123,6 +123,32 @@ local function showStamp(message, accentColor, subMessage, withGithubIcon)
     hs.timer.doAfter(2.6, function() canvas:delete() end)
 end
 
+local function decodeParam(value)
+    if not value then return nil end
+    if hs.http and hs.http.urlDecode then
+        return hs.http.urlDecode(value)
+    end
+    return value:gsub("+", " ")
+end
+
+local function showGithubResult(status, commitMessage)
+    if status == "ok" then
+        showStamp(
+            "Code bien pousse sur GitHub !",
+            {red = 0.2, green = 1.0, blue = 0.4, alpha = 0.95},
+            commitMessage,
+            true
+        )
+    else
+        showStamp(
+            "Erreur git push",
+            {red = 0.9, green = 0.2, blue = 0.2, alpha = 0.95},
+            commitMessage,
+            true
+        )
+    end
+end
+
 local function runGit(args, callback)
     local fullArgs = {"-C", repoPath}
     for _, arg in ipairs(args) do
@@ -173,21 +199,22 @@ function _G.pushHammerspoon(prefixOverride)
 
                 runGit({"push"}, function(pushCode)
                     if pushCode == 0 then
-                        showStamp(
-                            "Code bien pousse sur GitHub !",
-                            {red = 0.2, green = 1.0, blue = 0.4, alpha = 0.95},
-                            "Reload Hammerspoon en cours",
-                            true
-                        )
+                        showGithubResult("ok", commitMessage)
                         hs.timer.doAfter(0.8, function()
                             hs.settings.set("koktek_auto_reload_pending", true)
                             hs.reload()
                         end)
                     else
-                        showStamp("Erreur git push", {red = 0.9, green = 0.2, blue = 0.2, alpha = 0.95}, nil, true)
+                        showGithubResult("fail", nil)
                     end
                 end)
             end)
         end)
     end)
 end
+
+hs.urlevent.bind("gitpush", function(_, params)
+    local status = params.status or "ok"
+    local commitMessage = decodeParam(params.commit)
+    showGithubResult(status, commitMessage)
+end)
