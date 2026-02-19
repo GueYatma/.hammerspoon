@@ -1,8 +1,12 @@
 -- ==========================================================
--- MODULE : AI PASTE (GÉOMÉTRIE SÉPARÉE MAC vs ACER)
+-- MODULE : AI PASTE (TOUT-TERRAIN + MODE MANUEL)
 -- ==========================================================
 
-local authorizedAI = { ["Gemini"] = true, ["ChatGPT"] = true }
+-- Liste des applications PWA dédiées
+local authorizedApps = { ["Gemini"] = true, ["ChatGPT"] = true }
+-- Liste des navigateurs à scanner
+local browsers = { ["Google Chrome"] = true, ["Arc"] = true, ["Brave Browser"] = true, ["Safari"] = true }
+
 _G.captureTask = nil
 _G.mouseWatcher = nil
 _G.clipboardWatcher = nil
@@ -19,48 +23,64 @@ local function notifyCopy(message)
     hs.alert.show(message or "Copié", style, mainScreen, 1.5)
 end
 
--- 2. FONCTION D'ENVOI (INTELLIGENCE DE L'ÉCRAN)
-local function sendToAI(isImage)
+-- 2. FONCTION DE RECHERCHE (Appli ou Navigateur)
+local function findAIWindow()
+    -- orderedWindows renvoie les fenêtres de la plus récente à la plus ancienne
+    -- C'est ce qui permet de trouver celle sur laquelle tu travailles en priorité
     local windows = hs.window.orderedWindows()
-    local targetApp = nil
-
+    
     for _, win in ipairs(windows) do
         local app = win:application()
-        if app and authorizedAI[app:name()] then
-            targetApp = app
-            break
+        if app then
+            local appName = app:name()
+            local title = win:title() or ""
+            
+            -- CAS A : C'est une application officielle (PWA)
+            if authorizedApps[appName] then
+                return win
+            end
+            
+            -- CAS B : C'est un navigateur (Chrome, etc.) et le titre contient l'IA
+            if browsers[appName] then
+                if string.find(title, "Gemini") or string.find(title, "ChatGPT") then
+                    return win
+                end
+            end
         end
     end
+    return nil
+end
 
-    if targetApp then
-        targetApp:activate()
+-- 3. FONCTION D'ENVOI
+local function sendToAI(isImage)
+    -- On cherche la fenêtre cible (PWA ou Navigateur)
+    local targetWin = findAIWindow()
+
+    if targetWin then
+        targetWin:focus() -- On met la fenêtre au premier plan
         
         -- Délai d'attente initial (Image vs Texte)
         local waitTime = isImage and 0.5 or 0.15
 
         hs.timer.doAfter(waitTime, function()
-            local win = targetApp:mainWindow()
-            if win then
-                local f = win:frame()
-                local currentScreen = win:screen()
+            -- On revérifie que la fenêtre est toujours là
+            if targetWin then
+                local f = targetWin:frame()
+                local currentScreen = targetWin:screen()
                 local primaryScreen = hs.screen.primaryScreen()
                 
-                -- === C'EST ICI QUE SE FAIT LA SÉPARATION ===
+                -- GÉOMÉTRIE (Basée sur ton code actuel : 0.90 partout)
                 local heightRatio
                 
                 if currentScreen == primaryScreen then
-                    -- CAS 1 : C'EST L'ÉCRAN DU MAC (Principal)
-                    -- On tape très bas (95%) car ça marchait bien pour lui
-                    heightRatio = 0.95
-                    -- hs.alert.show("Mode Mac") -- De-commente pour tester
-                else
-                    -- CAS 2 : C'EST L'ÉCRAN ACER (Secondaire)
-                    -- On remonte la souris (85%) pour ne pas taper le bord
+                    -- Écran Principal (Mac)
                     heightRatio = 0.90
-                    -- hs.alert.show("Mode Acer") -- De-commente pour tester
+                else
+                    -- Écran Secondaire (Acer)
+                    heightRatio = 0.90
                 end
 
-                -- Calcul du point de clic selon l'écran détecté
+                -- Calcul du point de clic
                 local clickPoint = {
                     x = f.x + (f.w * 0.5), 
                     y = f.y + (f.h * heightRatio) 
@@ -69,25 +89,21 @@ local function sendToAI(isImage)
                 -- Clic Focus
                 hs.eventtap.leftClick(clickPoint)
                 
-                -- Collage (Délai de sécurité 0.2s)
+                -- Collage (Cmd + V) uniquement
                 hs.timer.doAfter(0.2, function() 
                     hs.eventtap.keyStroke({"cmd"}, "v") 
                     
-                    -- Entrée UNIQUEMENT pour le Texte (Pas pour l'image)
-                    if not isImage then
-                        hs.timer.doAfter(0.1, function()
-                            hs.eventtap.keyStroke({}, "return")
-                        end)
-                    end
+                    -- NOTE : J'ai supprimé la touche "Entrée".
+                    -- Le script s'arrête ici, te laissant la main pour valider.
                 end)
             end
         end)
     else
-        hs.alert.show("❌ IA introuvable")
+        hs.alert.show("❌ IA introuvable (Ouvrez Gemini ou ChatGPT)")
     end
 end
 
--- 3. DÉCLENCHEUR SOURIS (Terminal)
+-- 4. DÉCLENCHEUR SOURIS (Terminal)
 _G.mouseWatcher = hs.eventtap.new({hs.eventtap.event.types.leftMouseUp}, function(event)
     local app = hs.application.frontmostApplication()
     if app and app:bundleID() == "com.apple.Terminal" then
@@ -96,7 +112,7 @@ _G.mouseWatcher = hs.eventtap.new({hs.eventtap.event.types.leftMouseUp}, functio
 end)
 _G.mouseWatcher:start()
 
--- 4. SURVEILLANT PRESSE-PAPIER
+-- 5. SURVEILLANT PRESSE-PAPIER
 local lastCount = hs.pasteboard.changeCount()
 
 _G.clipboardWatcher = hs.pasteboard.watcher.new(function()
@@ -117,11 +133,11 @@ _G.clipboardWatcher = hs.pasteboard.watcher.new(function()
 end)
 _G.clipboardWatcher:start()
 
--- 5. CAPTURE D'ÉCRAN
+-- 6. CAPTURE D'ÉCRAN
 hs.hotkey.bind({"alt"}, "s", function()
     _G.captureTask = hs.task.new("/usr/sbin/screencapture", function(exitCode)
         if exitCode == 0 then 
-            hs.timer.doAfter(0.1, function()
+            hs.timer.doAfter(0.6, function()
                 notifyCopy("Image Copiée")
                 sendToAI(true) -- C'est une image
             end)

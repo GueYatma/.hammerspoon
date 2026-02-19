@@ -5,7 +5,7 @@
 
 -- Variables de mémoire GPS
 local currentLeftDesktop = 1
-local currentRightDesktop = 11
+local currentRightDesktop = 9
 
 -- Gestionnaires pour les alertes (Nettoyage propre)
 local leftAlertID = nil
@@ -15,25 +15,20 @@ local rightTimer = nil
 
 -- TABLE DES BUREAUX (Noms et Couleurs)
 _G.desktops = {
-    -- === ÉCRAN GAUCHE (1 à 10) ===
-    [1]  = { name = "DEV / VS CODE",           color = {red=0.2, green=0.6, blue=1, alpha=0.95} },
-    [2]  = { name = "VPS / N8N",               color = {red=0.5, green=0.0, blue=0.5, alpha=0.95} },
-    [3]  = { name = "KOKTEK.COM",              color = {red=1, green=0.4, blue=0.6, alpha=0.95} },
-    [4]  = { name = "ASSO / SOCIAL",           color = {red=0.2, green=0.8, blue=0.2, alpha=0.95} },
-    [5]  = { name = "FREELANCE",               color = {red=1, green=0.8, blue=0.0, alpha=0.95} },
-    [6]  = { name = "JOB SEARCH",              color = {red=0.0, green=0.8, blue=0.8, alpha=0.95} },
-    [7]  = { name = "SPRINTER CEE",            color = {red=0.6, green=0.6, blue=0.6, alpha=0.95} },
-    [8]  = { name = "URSSAF",                  color = {red=0.9, green=0.1, blue=0.1, alpha=0.95} },
-    [9]  = { name = "SANTE / FAMILLE",         color = {red=1, green=0.5, blue=0.0, alpha=0.95} },
-    [10] = { name = "BASES DE DONNEES",        color = {red=0.3, green=0.3, blue=0.9, alpha=0.95} },
-    
-    -- === ÉCRAN DROITE (11 à 16) ===
-    [11] = { name = "TERMINAL",                color = {red=1, green=0.8, blue=0.0, alpha=0.95} },
-    [12] = { name = "BACKSTAGE_2",    color = {white=0.4, alpha=0.9} },
-    [13] = { name = "BACKSTAGE_3",              color = {white=0.4, alpha=0.9} },
-    [14] = { name = "BACKSTAGE_4",              color = {white=0.4, alpha=0.9} },
-    [15] = { name = "BACKSTAGE_5",              color = {white=0.4, alpha=0.9} },
-    [16] = { name = "HAMMERSPOON",             color = {red=0.5, green=0.6, blue=0.2, alpha=0.85} }           
+    -- === ÉCRAN GAUCHE (1 à 8) ===
+    [1]  = { name = "e-Mail",                 color = {red=0.2, green=0.6, blue=1, alpha=0.95} },
+    [2]  = { name = "IA",                     color = {red=0.5, green=0.0, blue=0.5, alpha=0.95} },
+    [3]  = { name = "Directus",               color = {red=1, green=0.4, blue=0.6, alpha=0.95} },
+    [4]  = { name = "Postgre Admin",          color = {red=0.2, green=0.8, blue=0.2, alpha=0.95} },
+    [5]  = { name = "Terminaux",              color = {red=1, green=0.8, blue=0.0, alpha=0.95} },
+    [6]  = { name = "GitHub",                 color = {red=0.0, green=0.8, blue=0.8, alpha=0.95} },
+    [7]  = { name = "Hostinger",              color = {red=0.6, green=0.6, blue=0.6, alpha=0.95} },
+
+    -- === ÉCRAN DROITE (9 à 16) ===
+    [9]  = { name = "VS Code — koktek",       color = {red=1, green=0.5, blue=0.0, alpha=0.95} },
+    [10] = { name = "koktek localhost/vps",   color = {red=0.3, green=0.3, blue=0.9, alpha=0.95} },
+    [15] = { name = "VS Code — Hammerspoon", color = {white=0.4, alpha=0.9} },
+    [16] = { name = "Draft",                 color = {red=0.5, green=0.6, blue=0.2, alpha=0.85} }
 }
 
 local function getScreens()
@@ -89,20 +84,22 @@ end
 -- Navigation via Pavé Numérique (Directe)
 local function switchToDesktop(index)
     local screens = getScreens()
-    local targetScreen = (index <= 10) and screens.left or screens.right
+    local targetScreen = (index <= 8) and screens.left or screens.right
     
     -- Nettoyage immédiat pour réactivité
     clearScreen(targetScreen, screens)
 
-    if index <= 10 then currentLeftDesktop = index else currentRightDesktop = index end
+    if index <= 8 then currentLeftDesktop = index else currentRightDesktop = index end
 
-    if index <= 9 then hs.eventtap.keyStroke({"ctrl"}, tostring(index))
-    elseif index == 10 then hs.eventtap.keyStroke({"ctrl"}, "0")
-    elseif index > 10 then hs.eventtap.keyStroke({"ctrl", "alt"}, tostring(index - 10)) end
+    if index <= 8 then
+        hs.eventtap.keyStroke({"ctrl"}, tostring(index))
+    else
+        hs.eventtap.keyStroke({"ctrl", "alt"}, tostring(index - 8))
+    end
 
     -- Affichage
     local t = hs.timer.doAfter(0.5, function() displayBadge(index, targetScreen) end)
-    if index <= 10 then leftTimer = t else rightTimer = t end
+    if index <= 8 then leftTimer = t else rightTimer = t end
 end
 
 local function showDualGPS()
@@ -129,12 +126,12 @@ local function updateGPSMemory(direction)
     if isLeft then
         local newIndex = currentLeftDesktop + direction
         if newIndex < 1 then newIndex = 1 end
-        if newIndex > 10 then newIndex = 10 end
+        if newIndex > 8 then newIndex = 8 end
         currentLeftDesktop = newIndex
         leftTimer = hs.timer.doAfter(0.2, function() displayBadge(currentLeftDesktop, screens.left) end)
     else
         local newIndex = currentRightDesktop + direction
-        if newIndex < 11 then newIndex = 11 end
+        if newIndex < 9 then newIndex = 9 end
         if newIndex > 16 then newIndex = 16 end
         currentRightDesktop = newIndex
         rightTimer = hs.timer.doAfter(0.2, function() displayBadge(currentRightDesktop, screens.right) end)
@@ -162,9 +159,6 @@ _G.arrowWatcher = hs.eventtap.new({hs.eventtap.event.types.keyDown}, function(ev
 end):start()
 
 -- RACCOURCIS
-for i = 1, 9 do hs.hotkey.bind({"ctrl"}, "pad" .. i, function() switchToDesktop(i) end) end
-hs.hotkey.bind({"ctrl"}, "pad0", function() switchToDesktop(10) end)
-for i = 1, 6 do hs.hotkey.bind({"ctrl", "shift"}, "pad" .. i, function() switchToDesktop(i + 10) end) end
+for i = 1, 8 do hs.hotkey.bind({"ctrl"}, "pad" .. i, function() switchToDesktop(i) end) end
+for i = 1, 8 do hs.hotkey.bind({"ctrl", "shift"}, "pad" .. i, function() switchToDesktop(i + 8) end) end
 hs.hotkey.bind({"ctrl", "alt"}, "pad0", showDualGPS)
-
-hs.alert.show("✅ GPS Desktops : Version Stable")

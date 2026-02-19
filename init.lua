@@ -2,7 +2,6 @@
 -- INIT.LUA - LE CHEF D'ORCHESTRE
 -- ==========================================================
 
-hs.alert.show("Hammerspoon : Chargement...")
 
 -- 1. Outils Système (Reload, Caffeinate...)
 require("modules.system")
@@ -22,4 +21,5 @@ require("modules.dashboard")
 -- 6. Intelligence Artificielle (Le fameux ai_paste)
 require("modules.ai_paste")  -- <--- CORRECTION ICI (un seul "modules")
 
-hs.alert.show("✅ Hammerspoon : Tout est chargé !")
+-- 7. Git Push (KOKTEK)
+require("modules.git_push")
