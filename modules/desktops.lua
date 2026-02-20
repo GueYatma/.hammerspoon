@@ -17,7 +17,7 @@ local rightTimer = nil
 _G.desktops = {
     -- === ÉCRAN GAUCHE (1 à 8) ===
     [1]  = { name = "e-Mail",                 color = {red=0.2, green=0.6, blue=1, alpha=0.95} },
-    [2]  = { name = "IA",                     color = {red=0.5, green=0.0, blue=0.5, alpha=0.95} },
+    [2]  = { name = "N8N",                    color = {red=0.5, green=0.0, blue=0.5, alpha=0.95} },
     [3]  = { name = "Directus",               color = {red=1, green=0.4, blue=0.6, alpha=0.95} },
     [4]  = { name = "Postgre Admin",          color = {red=0.2, green=0.8, blue=0.2, alpha=0.95} },
     [5]  = { name = "Terminaux",              color = {red=1, green=0.8, blue=0.0, alpha=0.95} },
